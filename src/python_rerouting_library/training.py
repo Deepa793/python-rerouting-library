@@ -1,4 +1,4 @@
-from __future__ import annotations
+ from __future__ import annotations
 
 import argparse
 import csv
@@ -11,15 +11,24 @@ from sklearn.linear_model import LogisticRegression
 from .router import DEFAULT_EMBEDDING_MODEL
 
 
-def load_training_data(csv_path: Path) -> tuple[list[str], list[str]]:
+def load_training_data(
+    csv_path: Path,
+) -> tuple[list[str], list[str]]:
     queries: list[str] = []
     labels: list[str] = []
 
-    with csv_path.open("r", encoding="utf-8", newline="") as f:
+    with csv_path.open(
+        "r",
+        encoding="utf-8",
+        newline="",
+    ) as f:
         reader = csv.DictReader(f)
 
         required = {"label", "query"}
-        if not required.issubset(set(reader.fieldnames or [])):
+
+        if not required.issubset(
+            set(reader.fieldnames or [])
+        ):
             raise ValueError(
                 "CSV must contain 'label' and 'query' columns."
             )
@@ -34,13 +43,17 @@ def load_training_data(csv_path: Path) -> tuple[list[str], list[str]]:
                 )
 
             if not query:
-                raise ValueError("Encountered an empty query.")
+                raise ValueError(
+                    "Encountered an empty query."
+                )
 
             labels.append(label)
             queries.append(query)
 
     if not queries:
-        raise ValueError("Training CSV is empty.")
+        raise ValueError(
+            "Training CSV is empty."
+        )
 
     return queries, labels
 
@@ -50,12 +63,13 @@ def train_router(
     output_path: str | Path,
     *,
     embedding_model_name: str = DEFAULT_EMBEDDING_MODEL,
-    threshold: float = 0.5,
 ) -> Path:
     csv_path = Path(csv_path)
     output_path = Path(output_path)
 
-    queries, labels = load_training_data(csv_path)
+    queries, labels = load_training_data(
+        csv_path
+    )
 
     print(
         f"Loaded {len(queries)} training examples: "
@@ -63,7 +77,10 @@ def train_router(
         f"{labels.count('complex')} complex"
     )
 
-    print(f"Loading embedding model: {embedding_model_name}")
+    print(
+        f"Loading embedding model: "
+        f"{embedding_model_name}"
+    )
 
     encoder = SentenceTransformer(
         embedding_model_name,
@@ -79,7 +96,9 @@ def train_router(
         show_progress_bar=True,
     )
 
-    print("Training Logistic Regression classifier...")
+    print(
+        "Training Logistic Regression classifier..."
+    )
 
     classifier = LogisticRegression(
         max_iter=1000,
@@ -96,7 +115,6 @@ def train_router(
     artifact = {
         "classifier": classifier,
         "embedding_model_name": embedding_model_name,
-        "threshold": float(threshold),
         "training_examples": len(queries),
         "classes": list(classifier.classes_),
     }
@@ -111,7 +129,10 @@ def train_router(
         output_path,
     )
 
-    print(f"Saved router classifier to: {output_path.resolve()}")
+    print(
+        f"Saved router classifier to: "
+        f"{output_path.resolve()}"
+    )
 
     return output_path
 
@@ -143,24 +164,12 @@ def main() -> None:
         default=DEFAULT_EMBEDDING_MODEL,
     )
 
-    parser.add_argument(
-        "--threshold",
-        type=float,
-        default=0.5,
-    )
-
     args = parser.parse_args()
-
-    if not 0.0 < args.threshold < 1.0:
-        parser.error(
-            "--threshold must be between 0 and 1."
-        )
 
     train_router(
         csv_path=args.csv,
         output_path=args.output,
         embedding_model_name=args.model,
-        threshold=args.threshold,
     )
 
 

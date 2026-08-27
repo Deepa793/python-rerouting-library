@@ -95,7 +95,7 @@ python_rerouting_library_v0_1/
 
 ## Requirements
 
-* Python 3.12+
+* Python 3.10+
 * Local GGUF model for the local backend
 * OpenAI-compatible cloud API
 * Router classifier artifact
