@@ -1,0 +1,51 @@
+id,label,query,router_complexity_score,router_label,router_match
+1,simple,Unsubscribe me from promotional emails from Amazon.,0.08,simple,True
+2,simple,What is the capital of Japan?,0.03,simple,True
+3,simple,What is the weather in Denver today?,0.10,simple,True
+4,simple,Convert 72 degrees Fahrenheit to Celsius.,0.05,simple,True
+5,simple,What is 15 percent of 240?,0.04,simple,True
+6,simple,Find the latest email from John Smith.,0.12,simple,True
+7,simple,What does HTTP status code 404 mean?,0.06,simple,True
+8,simple,What is the ticker symbol for Microsoft?,0.05,simple,True
+9,simple,Translate 'Good morning' into Spanish.,0.07,simple,True
+10,simple,How many days are there between September 1 and October 15?,0.09,simple,True
+11,simple,Find all unread emails from today.,0.13,simple,True
+12,simple,What is the boiling point of water in Fahrenheit?,0.04,simple,True
+13,simple,What does RFP stand for?,0.03,simple,True
+14,simple,What time is my next meeting today?,0.11,simple,True
+15,simple,Find my flight confirmation email.,0.14,simple,True
+16,simple,What is the current USD-to-INR exchange rate?,0.12,simple,True
+17,simple,Cancel my 3:00 PM calendar meeting tomorrow.,0.16,simple,True
+18,simple,Show me emails received from Microsoft this week.,0.15,simple,True
+19,simple,Find the phone number for my dentist in my contacts.,0.12,simple,True
+20,simple,What version of Python introduced match statements?,0.08,simple,True
+21,simple,Rename report_old.pdf to report_final.pdf.,0.10,simple,True
+22,simple,What is the square root of 144?,0.02,simple,True
+23,simple,What is the chemical symbol for gold?,0.03,simple,True
+24,simple,Who wrote Pride and Prejudice?,0.04,simple,True
+25,simple,What is the largest planet in the solar system?,0.03,simple,True
+26,complex,"Design a multi-tenant SaaS architecture for 100,000 customers with tenant isolation, horizontal scalability, disaster recovery, and low operating cost.",0.95,complex,True
+27,complex,"Analyze a cloud bill, identify the three largest cost drivers, determine why they increased, and propose changes that reduce cost by 20 percent without degrading reliability.",0.91,complex,True
+28,complex,"Design an RFP review agent that extracts requirements, identifies mandatory constraints, maps vendor responses to requirements, detects omissions, and produces a traceable compliance report.",0.96,complex,True
+29,complex,Redesign a set of microservices with circular dependencies while minimizing migration risk and maintaining backward compatibility.,0.89,complex,True
+30,complex,"Design a data pipeline that ingests 500 million events per day, handles late-arriving records, supports replay, and makes analytics available within five minutes.",0.94,complex,True
+31,complex,"Compare monolithic, microservice, and modular-monolith architectures for a new enterprise application and recommend one based on team size, deployment frequency, scale, and maintainability.",0.88,complex,True
+32,complex,"Design authentication and authorization for employees, customers, administrators, service accounts, RBAC, and temporary delegated access.",0.92,complex,True
+33,complex,"Investigate why API latency increased from 200 milliseconds to 1.8 seconds after a deployment, isolate probable bottlenecks, and define experiments to confirm the root cause.",0.90,complex,True
+34,complex,Design a disaster-recovery strategy for a financial application requiring an RPO below five minutes and an RTO below thirty minutes across two geographic regions.,0.95,complex,True
+35,complex,"Determine whether to use RAG, fine-tuning, prompt engineering, or a combination for an internal technical-support assistant considering accuracy, cost, privacy, and maintenance.",0.87,complex,True
+36,complex,"Design an AI-agent workflow that plans tasks, calls external tools, validates results, recovers from failed tool calls, and prevents infinite execution loops.",0.97,complex,True
+37,complex,"Design a customer-360 architecture that unifies customer, transaction, support, and product-usage data with identity resolution and governance controls.",0.93,complex,True
+38,complex,Create a migration strategy for moving a 15-year-old on-premises application to the cloud without interrupting business operations.,0.86,complex,True
+39,complex,"Design a document-processing system that receives PDFs, extracts text and tables, classifies documents, validates critical fields, routes low-confidence cases to humans, and stores provenance.",0.94,complex,True
+40,complex,"Evaluate whether a company should build, buy, or adopt open source for an enterprise vector-search platform, including five-year cost and operational-risk tradeoffs.",0.88,complex,True
+41,complex,"Design an e-commerce recommendation system combining historical purchases, browsing behavior, inventory availability, margin, and real-time session context.",0.91,complex,True
+42,complex,"Analyze a production outage involving an overloaded database, failed retries, and cascading service failures, then propose immediate remediation and architectural safeguards.",0.96,complex,True
+43,complex,"Design a secure architecture for exposing internal enterprise data to an LLM while preventing unauthorized retrieval, sensitive-data leakage, and prompt-injection attacks.",0.98,complex,True
+44,complex,Design a real-time fraud-detection system that keeps false positives low and provides explainable reasons for blocked transactions.,0.92,complex,True
+45,complex,"Design a deployment architecture supporting blue-green releases, canary deployments, automatic rollback, schema migrations, and zero-downtime upgrades.",0.93,complex,True
+46,complex,"Given 20 competing product features, limited engineering capacity, revenue targets, customer commitments, and technical debt, build a prioritized quarterly roadmap and explain the tradeoffs.",0.85,complex,True
+47,complex,"Design an observability strategy across hundreds of distributed services that correlates logs, metrics, traces, deployments, infrastructure events, and customer-impact signals.",0.95,complex,True
+48,complex,"Compare Kafka, RabbitMQ, AWS SQS, and a database-backed queue for an order-processing system requiring durability, ordering, retries, and high throughput, then recommend an architecture.",0.90,complex,True
+49,complex,"Design a knowledge assistant that answers from internal documentation, detects insufficient evidence, cites sources, and escalates uncertain answers instead of hallucinating.",0.94,complex,True
+50,complex,"Given growing database contention, determine whether to introduce read replicas, caching, partitioning, sharding, asynchronous processing, or a schema redesign, and define the order of interventions.",0.97,complex,True
