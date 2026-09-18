@@ -1,48 +1,78 @@
 # Python Rerouting Library
 
-A lightweight Python library that routes user queries between a local Llama model and a cloud LLM using privacy rules and semantic complexity classification.
+A lightweight Python library for routing user queries between local and cloud LLM backends using **privacy-aware policy checks** and **semantic complexity classification**.
 
-## What Changed in v0.2.0
+Current version: **0.2.1**
 
-Version 0.2 adds a **privacy-first routing layer** in front of the semantic complexity router.
+PyPI:
 
-The key rule is:
+```text
+https://pypi.org/project/python-rerouting-library/
+```
 
-> Privacy policy takes precedence over complexity routing.
+GitHub:
 
-If a query contains detected sensitive information, the query is routed directly to the local model and is never sent to the cloud.
+```text
+https://github.com/Deepa793/python-rerouting-library
+```
 
 ---
 
-## Routing Architecture
+## Overview
+
+Python Rerouting Library provides two routing layers:
 
 ```text
 Query
   ↓
-Privacy Detector
+Privacy Policy
   ↓
-Sensitive data detected?
+Semantic Complexity Routing
+  ↓
+Local or Cloud Backend
+```
+
+The first layer checks for supported sensitive-data patterns.
+
+The second layer determines whether a clean query is simple, uncertain, or complex.
+
+The key design principle is:
+
+> A detected privacy match takes precedence over complexity routing.
+
+---
+
+# Routing Architecture
+
+```text
+Query
+  ↓
+PrivacyDetector
+  ↓
+Supported sensitive pattern detected?
   │
   ├── YES
   │     ↓
   │   privacy_override
   │     ↓
-  │   Local Llama only
+  │   Local backend only
   │     ↓
-  │   if local fails → DispatchError
+  │   local failure → DispatchError
   │
-  │   NEVER cloud
+  │   no cloud fallback for this matched query
   │
   └── NO
         ↓
-      MiniLM Semantic Router
+      MiniLM Embedding
         ↓
       Logistic Regression
+        ↓
+      P(complex)
         ↓
       simple / uncertain / complex
 ```
 
-For clean queries, normal routing continues:
+Normal complexity routing:
 
 ```text
 simple
@@ -62,11 +92,11 @@ Cloud
 
 ---
 
-## Privacy-First Routing
+# Privacy-First Routing
 
-Before complexity scoring, every query is checked by `PrivacyDetector`.
+Before complexity scoring, each query is evaluated by `PrivacyDetector`.
 
-The current detector looks for common patterns including:
+The current detector looks for supported patterns including:
 
 * Email addresses
 * US-style phone numbers
@@ -76,35 +106,44 @@ The current detector looks for common patterns including:
 
 Credit-card candidates are additionally validated using the **Luhn checksum** to reduce false positives.
 
-If sensitive information is detected:
-
-```text
-Query
-  ↓
-PrivacyDetector
-  ↓
-privacy_override
-  ↓
-Local Llama
-```
-
-The MiniLM semantic router is not called.
-
-The cloud backend is not called.
-
-If the local backend fails:
+If `PrivacyDetector` identifies one or more supported sensitive-data patterns, the dispatcher assigns:
 
 ```text
 privacy_override
-  ↓
-Local backend failure
-  ↓
-DispatchError
 ```
 
-There is intentionally **no cloud fallback** for privacy-sensitive queries.
+For a query that triggers `privacy_override`:
 
-The detector reports only privacy categories such as:
+* the MiniLM complexity router is not invoked;
+* the configured local backend is used;
+* the dispatcher does not invoke the cloud backend;
+* cloud fallback is disabled for that matched request;
+* if local processing fails, a `DispatchError` is raised.
+
+Example:
+
+```text
+Design a multi-region database architecture
+for alice@example.com with automatic failover.
+```
+
+The query may look complex, but the email pattern is detected first:
+
+```text
+email detected
+    ↓
+privacy_override
+    ↓
+local backend
+```
+
+The complexity classifier is not called for that request.
+
+---
+
+## Privacy Categories
+
+`PrivacyDetector` currently reports categories such as:
 
 ```text
 email
@@ -114,58 +153,117 @@ api_key
 credit_card
 ```
 
-It does not return the matched sensitive value.
+It does not intentionally return the matched sensitive value through `PrivacyDecision`.
 
-> The privacy detector is a lightweight policy layer based on known patterns. It is not intended to replace a full Data Loss Prevention, compliance, or enterprise sensitive-data classification system.
+Example:
+
+```python
+from python_rerouting_library import PrivacyDetector
+
+detector = PrivacyDetector()
+
+decision = detector.detect(
+    "Contact alice@example.com"
+)
+
+print(decision)
+```
+
+Expected:
+
+```text
+PrivacyDecision(
+    is_sensitive=True,
+    categories=('email',)
+)
+```
 
 ---
 
-## Semantic Router
+# Important Privacy Limitations
 
-Queries that pass the privacy check continue to the semantic router.
+`PrivacyDetector` is a lightweight, pattern-based safeguard.
+
+It is **not a complete privacy, security, DLP, or compliance system**.
+
+Detection is heuristic and may produce both:
+
+* false positives
+* false negatives
+
+Sensitive information that does not match one of the supported patterns may continue through normal routing and, depending on the resulting routing decision, may be sent to a configured cloud backend.
+
+The current detector does not comprehensively identify:
+
+* names or named entities
+* street addresses
+* medical or health information
+* international identity numbers
+* arbitrary credentials or secrets
+* context-dependent sensitive information
+* obfuscated sensitive information
+* unusual representations of otherwise supported patterns
+
+Applications handling regulated, confidential, or highly sensitive information should use additional controls appropriate to their environment, such as:
+
+* enterprise DLP
+* data classification
+* redaction
+* access controls
+* auditing
+* provider-specific privacy controls
+* application-level validation
+
+The privacy layer should therefore be treated as an **additional routing safeguard**, not as a guarantee that all sensitive information will be detected or prevented from leaving the local environment.
+
+---
+
+# Semantic Router
+
+Queries that do not trigger a privacy override continue to the semantic router.
 
 The router uses:
 
 * `sentence-transformers/all-MiniLM-L6-v2`
 * 384-dimensional semantic embeddings
 * Logistic Regression
-* Configurable uncertainty thresholds
+* configurable uncertainty thresholds
 
-The query is converted into an embedding and passed to the trained classifier.
+The query is converted into an embedding.
 
-The classifier produces:
+The trained classifier then estimates:
 
 ```text
 P(complex)
 ```
 
-This probability is then used by the routing policy.
+This probability is used by the routing policy.
 
 ---
 
-## Default Complexity Routing Policy
+# Default Complexity Routing Policy
 
 ```text
 P(complex) < 0.40
     → simple
-    → local Llama
+    → local backend
 
 0.40 ≤ P(complex) ≤ 0.60
     → uncertain
-    → cloud
+    → cloud backend
 
 P(complex) > 0.60
     → complex
-    → cloud
+    → cloud backend
 ```
 
 The thresholds are configurable.
 
 ---
 
-## Routing Priority
+# Routing Priority
 
-The system now contains two routing layers:
+The routing policy contains two layers:
 
 ```text
 1. Privacy policy
@@ -173,65 +271,58 @@ The system now contains two routing layers:
 2. Complexity policy
 ```
 
-Privacy always wins.
+A detected privacy match takes precedence over complexity routing.
 
-For example, a query such as:
-
-```text
-Design a multi-region database architecture
-for alice@example.com with automatic failover.
-```
-
-looks like a complex query.
-
-In v0.1 it would likely be routed to the cloud.
-
-In v0.2:
-
-```text
-email detected
-    ↓
-privacy_override
-    ↓
-local only
-```
-
-The semantic complexity classifier is not called.
+This means model-selection optimization occurs only after the privacy detector allows the request to continue through the normal semantic-routing pipeline.
 
 ---
 
-## Failure Policy
+# Failure Policy
 
-### Privacy-sensitive query
+## Detected privacy-sensitive query
 
 ```text
-Local Llama
+privacy_override
+    ↓
+Local backend
     ↓ failure
 DispatchError
 ```
 
-Cloud fallback is prohibited.
+No cloud fallback is attempted for that matched request.
 
-### Clean simple query
+---
+
+## Clean simple query
 
 ```text
-Local Llama
+simple
+    ↓
+Local backend
     ↓ failure
 Cloud fallback
 ```
 
-### Clean uncertain query
+---
+
+## Clean uncertain query
 
 ```text
-Cloud
+uncertain
+    ↓
+Cloud backend
     ↓ failure
 DispatchError
 ```
 
-### Clean complex query
+---
+
+## Clean complex query
 
 ```text
-Cloud
+complex
+    ↓
+Cloud backend
     ↓ failure
 DispatchError
 ```
@@ -240,7 +331,40 @@ Complex and uncertain queries are not silently downgraded to the local model.
 
 ---
 
-## Project Structure
+# Route Decision Behavior
+
+Normal semantic routes contain:
+
+```text
+label
+confidence
+complex_probability
+latency_ms
+```
+
+Example:
+
+```text
+label = simple
+confidence = 0.68
+complex_probability = 0.32
+```
+
+For a privacy override:
+
+```text
+label = privacy_override
+confidence = None
+complex_probability = None
+```
+
+This is intentional.
+
+The complexity classifier never ran, so the library does not invent a complexity probability.
+
+---
+
+# Project Structure
 
 ```text
 python-rerouting-library/
@@ -257,11 +381,14 @@ python-rerouting-library/
 │           ├── __init__.py
 │           ├── local_llama.py
 │           └── cloud.py
+│
 ├── tests/
+│   ├── test_classifier_artifact.py
 │   ├── test_dispatcher.py
 │   ├── test_privacy.py
 │   ├── test_router_decision.py
 │   └── test_router_thresholds.py
+│
 ├── examples/
 ├── benchmarks/
 ├── pyproject.toml
@@ -271,37 +398,49 @@ python-rerouting-library/
 └── README.md
 ```
 
-The generated router classifier is stored under:
+Generated classifier artifacts are normally stored under:
 
 ```text
 artifacts/
 ```
 
-and is intentionally excluded from Git.
+and are intentionally excluded from Git.
 
 ---
 
-## Requirements
+# Requirements
 
 * Python 3.10+
-* Router classifier artifact
-* Local GGUF model for local Llama inference
-* OpenAI-compatible cloud API for cloud routing
+* A compatible router classifier artifact
+* A local GGUF model if using the local Llama backend
+* A compatible cloud API if using cloud routing
 
 ---
 
-## Installation
+# Installation
 
-From the project folder:
+Install from PyPI:
 
 ```powershell
-python -m pip install -e ".[dev]"
+pip install python-rerouting-library
+```
+
+Install a specific version:
+
+```powershell
+pip install python-rerouting-library==0.2.1
 ```
 
 If using the local Llama backend:
 
 ```powershell
-python -m pip install -e ".[local-llama]"
+pip install "python-rerouting-library[local-llama]"
+```
+
+For development:
+
+```powershell
+python -m pip install -e ".[dev]"
 ```
 
 `llama-cpp-python` is an optional dependency.
@@ -310,16 +449,16 @@ Cloud-only users do not need to install it.
 
 ---
 
-## Configuration
+# Configuration
 
-The library reads runtime settings from environment variables.
+The library can read runtime configuration from environment variables.
 
 Example:
 
 ```powershell
 $env:LLAMA_MODEL_PATH="C:\models\llama3.2\model.gguf"
 
-$env:ROUTER_CLASSIFIER_PATH="artifacts\router_classifier.joblib"
+$env:ROUTER_CLASSIFIER_PATH="C:\path\to\router_classifier.joblib"
 
 $env:CLOUD_BASE_URL="https://api.openai.com/v1"
 $env:CLOUD_MODEL="gpt-5.4-nano"
@@ -338,18 +477,20 @@ Never commit real API keys or credentials.
 
 ---
 
-## Classifier Artifact
+# Classifier Artifact
 
-The package does not ship with a default production complexity classifier.
+The package does **not** ship with a default production complexity classifier.
 
-Complexity classification is workload-dependent. What should be considered a simple or complex query can vary depending on:
+Complexity classification is workload-dependent.
 
-- the local model being used
-- the cloud model being used
-- application domain
-- latency requirements
-- cost policy
-- desired routing behavior
+What should be considered simple or complex can vary based on:
+
+* local model capability
+* cloud model capability
+* application domain
+* latency requirements
+* cost policy
+* desired routing behavior
 
 Users should therefore train or provide a compatible classifier artifact.
 
@@ -361,16 +502,27 @@ from python_rerouting_library import Router
 router = Router(
     classifier_path="path/to/router_classifier.joblib"
 )
+```
 
-## Train the Router
+When using environment-based configuration:
 
-The current example training dataset is:
+```powershell
+$env:ROUTER_CLASSIFIER_PATH="C:\path\to\router_classifier.joblib"
+```
+
+If the classifier does not exist, the library raises an actionable error explaining how to provide or train one.
+
+---
+
+# Train the Router
+
+The repository includes an example development dataset:
 
 ```text
 benchmarks/router_queries_50.csv
 ```
 
-Train and save the classifier with:
+Train and save a classifier with:
 
 ```powershell
 python -m python_rerouting_library.training `
@@ -378,15 +530,45 @@ python -m python_rerouting_library.training `
     --output artifacts\router_classifier.joblib
 ```
 
-The training pipeline uses MiniLM embeddings and Logistic Regression.
+The training pipeline uses:
 
-The router thresholds are runtime routing policy and are not stored as a training-time decision threshold.
+```text
+Query
+  ↓
+MiniLM embedding
+  ↓
+Logistic Regression
+  ↓
+Classifier artifact
+```
+
+The included benchmark dataset is intended as an **example and development baseline**, not as a universal production routing model.
+
+The routing thresholds are runtime policy and are not stored as a training-time decision threshold.
 
 ---
 
-## Run the Full Example
+# Lazy Loading
 
-After configuring the environment and training the router:
+The Sentence Transformers stack is loaded only when semantic routing actually requires it.
+
+This means lightweight functionality such as:
+
+```python
+from python_rerouting_library import PrivacyDetector
+```
+
+can be used without immediately initializing the embedding-model stack.
+
+Similarly, cloud-backend imports do not require `llama-cpp-python`.
+
+This keeps optional functionality isolated and improves package usability across different environments.
+
+---
+
+# Run the Full Example
+
+After configuring the environment and training or providing the router classifier:
 
 ```powershell
 python .\examples\test_full_dispatcher.py
@@ -404,7 +586,7 @@ A clean complex query should normally route to:
 Backend: cloud-api
 ```
 
-A detected privacy-sensitive query should route to:
+A query that matches a supported privacy pattern should produce behavior similar to:
 
 ```text
 Route: privacy_override
@@ -413,16 +595,16 @@ Backend: local-llama
 
 ---
 
-## Run Tests
+# Run Tests
 
 ```powershell
 python -m pytest -v
 ```
 
-Current v0.2 regression suite:
+Current v0.2.1 regression suite:
 
 ```text
-26 passed
+29 passed
 ```
 
 The tests cover:
@@ -442,41 +624,16 @@ The tests cover:
 * Luhn validation
 * multiple privacy categories
 * privacy override before semantic routing
-* verification that privacy queries do not call the router
-* verification that privacy queries do not fall back to cloud
+* verification that matched privacy queries do not invoke the semantic router
+* verification that matched privacy queries do not fall back to cloud
+* explicit classifier-artifact configuration
+* missing-classifier error handling
 
 The automated unit tests do not call the OpenAI API.
 
 ---
 
-## Route Decision Behavior
-
-Normal semantic routes contain complexity information:
-
-```text
-label
-confidence
-complex_probability
-latency_ms
-```
-
-For a privacy override:
-
-```text
-label = privacy_override
-confidence = None
-complex_probability = None
-```
-
-This is intentional.
-
-The complexity classifier never ran, so the library does not invent a complexity probability.
-
----
-
-## Privacy Override Example
-
-Conceptually:
+# Privacy Override Example
 
 ```python
 result = dispatcher.run(
@@ -496,37 +653,58 @@ local-llama
 ('email',)
 ```
 
-The query is not sent to the cloud.
+Because the email pattern is detected, this request takes the `privacy_override` path and the dispatcher does not invoke the cloud backend.
 
 ---
 
-## Version History
+# Version History
 
-### v0.2.0
+## v0.2.1
 
-Adds:
+Adds PyPI release hardening and clearer package behavior:
 
-* Privacy-first routing
+* Published distribution on PyPI
+* Explicit classifier-artifact requirement
+* Improved missing-classifier errors
+* Lazy loading of the Sentence Transformers stack
+* Fresh-environment wheel validation
+* TestPyPI validation
+* Improved privacy documentation
+* Expanded regression suite to 29 tests
+
+PyPI:
+
+```text
+https://pypi.org/project/python-rerouting-library/0.2.1/
+```
+
+---
+
+## v0.2.0
+
+Introduced privacy-first routing:
+
 * `PrivacyDetector`
 * `PrivacyDecision`
 * `privacy_override`
-* Local-only processing for detected sensitive data
-* No cloud fallback for privacy-sensitive queries
+* Local-only processing for matched privacy patterns
+* No cloud fallback for matched privacy-override requests
 * Email detection
 * Phone-number detection
 * SSN detection
 * API-key pattern detection
 * Credit-card detection with Luhn validation
 * Privacy-category observability
-* Expanded regression tests
 
-### v0.1.0
+---
+
+## v0.1.0
 
 Introduced:
 
 * MiniLM semantic query embeddings
 * Logistic Regression complexity classifier
-* Simple / uncertain / complex routing
+* simple / uncertain / complex routing
 * Local Llama backend
 * Cloud LLM backend
 * Local-to-cloud fallback for simple queries
@@ -536,7 +714,7 @@ Introduced:
 
 ---
 
-## Design Principle
+# Design Principle
 
 The library separates three concerns:
 
@@ -551,7 +729,7 @@ Execution
 In v0.2:
 
 ```text
-Privacy Detector
+PrivacyDetector
       ↓
 Semantic Router
       ↓
@@ -560,30 +738,55 @@ Dispatcher
 Local / Cloud Backend
 ```
 
-This means model-selection optimization happens only after the privacy policy allows the query to continue through the normal routing pipeline.
+The privacy detector acts as a policy gate.
+
+The semantic router handles model-selection optimization.
+
+The dispatcher handles backend execution and fallback behavior.
 
 ---
 
-## Current Limitations
+# Current Limitations
 
-The current privacy detector is intentionally lightweight.
+The project is intentionally lightweight and still evolving.
 
-It does not yet provide:
+Current limitations include:
 
-* Named-entity recognition
-* Address detection
-* Medical-record detection
-* International identity-number detection
-* Context-aware secret detection
-* Configurable privacy policies
-* User-defined sensitive-data patterns
-* Enterprise DLP integration
+* privacy detection is regex/pattern based
+* privacy detection may miss sensitive information
+* no named-entity recognition
+* no address detection
+* no medical-record classification
+* no international identity-number coverage
+* no context-aware privacy classification
+* no configurable privacy-rule registry yet
+* no enterprise DLP integration
+* no bundled production complexity classifier
 
-These are possible future extensions.
+These are potential areas for future development.
 
 ---
 
-## License
+# Security and Privacy Guidance
+
+Do not treat this library as the sole privacy or security boundary for applications handling confidential, regulated, or highly sensitive information.
+
+Before production deployment, evaluate:
+
+* your privacy requirements
+* your data-classification requirements
+* your cloud-provider policies
+* your logging behavior
+* local-model security
+* secret management
+* access controls
+* regulatory or contractual requirements
+
+Applications should apply defense-in-depth rather than relying solely on the routing layer.
+
+---
+
+# License
 
 This project is licensed under the MIT License.
 
