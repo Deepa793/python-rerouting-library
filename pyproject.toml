@@ -4,7 +4,7 @@ build-backend = "setuptools.build_meta"
 
 [project]
 name = "python-rerouting-library"
-version = "0.1.0"
+version = "0.2.0"
 description = "Lightweight semantic query router with local and cloud dispatch backends"
 readme = "README.md"
 requires-python = ">=3.10"
