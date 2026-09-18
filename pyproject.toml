@@ -1,31 +1,79 @@
 [build-system]
-requires = ["setuptools>=77", "wheel"]
+requires = ["setuptools>=77.0.3", "wheel"]
 build-backend = "setuptools.build_meta"
+
 
 [project]
 name = "python-rerouting-library"
-version = "0.2.0"
-description = "Lightweight semantic query router with local and cloud dispatch backends"
+version = "0.2.1"
+
+description = "Privacy-aware semantic routing between local and cloud LLM backends"
+
 readme = "README.md"
+
 requires-python = ">=3.10"
+
+license = "MIT"
+license-files = ["LICENSE"]
+
+authors = [
+    { name = "Deepa793" }
+]
+
+keywords = [
+    "llm",
+    "routing",
+    "semantic-routing",
+    "local-llm",
+    "privacy",
+    "llama",
+    "openai",
+    "machine-learning",
+    "generative-ai"
+]
+
+classifiers = [
+    "Development Status :: 3 - Alpha",
+    "Intended Audience :: Developers",
+    "Programming Language :: Python :: 3",
+    "Programming Language :: Python :: 3.10",
+    "Programming Language :: Python :: 3.11",
+    "Programming Language :: Python :: 3.12",
+    "Operating System :: OS Independent",
+    "Topic :: Software Development :: Libraries :: Python Modules"
+]
+
 dependencies = [
     "numpy>=1.24",
     "scikit-learn>=1.1",
     "sentence-transformers>=3.0",
     "joblib>=1.4",
-    "openai>=1.0",
+    "openai>=1.0"
 ]
 
+
 [project.optional-dependencies]
+
 local-llama = [
-    "llama-cpp-python>=0.3",
+    "llama-cpp-python>=0.3"
 ]
+
 dev = [
     "pytest>=8",
+    "build>=1.2",
+    "twine>=6"
 ]
+
+
+[project.urls]
+Homepage = "https://github.com/Deepa793/python-rerouting-library"
+Repository = "https://github.com/Deepa793/python-rerouting-library"
+Issues = "https://github.com/Deepa793/python-rerouting-library/issues"
+
 
 [tool.setuptools.packages.find]
 where = ["src"]
+
 
 [tool.pytest.ini_options]
 pythonpath = ["src"]
