@@ -338,6 +338,30 @@ Never commit real API keys or credentials.
 
 ---
 
+## Classifier Artifact
+
+The package does not ship with a default production complexity classifier.
+
+Complexity classification is workload-dependent. What should be considered a simple or complex query can vary depending on:
+
+- the local model being used
+- the cloud model being used
+- application domain
+- latency requirements
+- cost policy
+- desired routing behavior
+
+Users should therefore train or provide a compatible classifier artifact.
+
+When using `Router` directly:
+
+```python
+from python_rerouting_library import Router
+
+router = Router(
+    classifier_path="path/to/router_classifier.joblib"
+)
+
 ## Train the Router
 
 The current example training dataset is:

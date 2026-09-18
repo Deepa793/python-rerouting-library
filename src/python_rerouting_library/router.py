@@ -3,9 +3,9 @@ from __future__ import annotations
 from dataclasses import dataclass
 from pathlib import Path
 from time import perf_counter
+from typing import Any
 
 import joblib
-from sentence_transformers import SentenceTransformer
 
 
 DEFAULT_EMBEDDING_MODEL = (
@@ -35,10 +35,15 @@ class Router:
             classifier_path
         )
 
-        if not self.classifier_path.exists():
+        if not self.classifier_path.is_file():
             raise FileNotFoundError(
                 "Router classifier not found: "
-                f"{self.classifier_path}"
+                f"{self.classifier_path}. "
+                "python-rerouting-library does not ship "
+                "with a default complexity classifier. "
+                "Train one with "
+                "'python -m python_rerouting_library.training' "
+                "or provide a compatible classifier_path."
             )
 
         if not (
@@ -96,14 +101,24 @@ class Router:
             or DEFAULT_EMBEDDING_MODEL
         )
 
-        self._embedding_model: (
-            SentenceTransformer | None
-        ) = None
+        self._embedding_model: Any | None = None
 
     def _get_embedding_model(
         self,
-    ) -> SentenceTransformer:
+    ) -> Any:
         if self._embedding_model is None:
+            try:
+                from sentence_transformers import (
+                    SentenceTransformer,
+                )
+            except ImportError as exc:
+                raise RuntimeError(
+                    "Sentence Transformers could not be "
+                    "loaded. Semantic routing requires the "
+                    "'sentence-transformers' dependency and "
+                    "a compatible Python environment."
+                ) from exc
+
             self._embedding_model = (
                 SentenceTransformer(
                     self.embedding_model_name,
@@ -184,12 +199,11 @@ class Router:
 
         if probability < self.simple_threshold:
             label = "simple"
-            confidence = 1.0 - probability
+            confidence = (
+                1.0 - probability
+            )
 
-        elif (
-            probability
-            > self.complex_threshold
-        ):
+        elif probability > self.complex_threshold:
             label = "complex"
             confidence = probability
 
